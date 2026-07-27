@@ -23,8 +23,6 @@ public class ReflectedArgs {
 
     public int flags;
 
-    private static volatile boolean legacyMode = false;
-
     public static final int StandardCall = 0;
 
     public static final int PyArgsCall = 1;
@@ -32,7 +30,11 @@ public class ReflectedArgs {
     public static final int PyArgsKeywordsCall = 2;
 
     public static void setLegacyMode(boolean legacyMode) {
-        ReflectedArgs.legacyMode = legacyMode;
+        Options.reflectedArgsLegacyMode = legacyMode;
+    }
+
+    public static boolean isLegacyMode() {
+        return Options.reflectedArgsLegacyMode;
     }
 
     public ReflectedArgs(Member method, Class<?>[] args, Class<?> declaringClass, boolean isStatic) {
@@ -212,7 +214,7 @@ public class ReflectedArgs {
      * fallback.
      */
     boolean betterVarargsMatchThan(ReflectedArgs other, PyObject self, PyObject[] pyArgs) {
-        if (legacyMode) {
+        if (Options.reflectedArgsLegacyMode) {
             // Legacy varargs dispatch overwrote the saved vararg candidate every time a later
             // varargs signature matched, so the last matching vararg in argslist won.
             return true;

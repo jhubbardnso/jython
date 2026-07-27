@@ -10,7 +10,7 @@ import java
 from java.lang import Float, Double, Integer, Long, Boolean, Exception
 from java.util import ArrayList
 from javatests import JOverload, Reflection
-from org.python.core import PyReflectedFunction, ReflectedArgs
+from org.python.core import Options, PyReflectedFunction, PySystemState, ReflectedArgs, RegistryKey
 
 class PyReflFuncEnvl:
 
@@ -290,6 +290,47 @@ class LegacyVarargsDispatchTests(unittest.TestCase):
         self.assertEqual(t.varArgs("name", 1, 2L, 3.0), "name: boolean")
 
 
+class ReflectedArgsOptionsTests(unittest.TestCase):
+
+    def setUp(self):
+        self.registry = PySystemState.registry
+        self.keys = [
+            RegistryKey.PYTHON_OPTIONS_REFLECTED_ARGS_LEGACY_MODE,
+        ]
+        self.saved_options = [
+            (key, self.registry.containsKey(key), self.registry.getProperty(key))
+            for key in self.keys
+        ]
+        self.saved_legacy_mode = ReflectedArgs.isLegacyMode()
+        for key in self.keys:
+            self.registry.remove(key)
+
+    def tearDown(self):
+        for key in self.keys:
+            self.registry.remove(key)
+        for key, existed, value in self.saved_options:
+            if existed:
+                self.registry.setProperty(key, value)
+        ReflectedArgs.setLegacyMode(self.saved_legacy_mode)
+
+    def test_reflected_args_legacy_mode_from_registry(self):
+        t = Reflection.OverloadResolution()
+        self.registry.setProperty(
+            RegistryKey.PYTHON_OPTIONS_REFLECTED_ARGS_LEGACY_MODE, "true")
+        Options.setFromRegistry()
+        self.assertTrue(ReflectedArgs.isLegacyMode())
+        self.assertEqual(t.varArgs(1, 2, 3), "Object")
+
+        self.registry.setProperty(
+            RegistryKey.PYTHON_OPTIONS_REFLECTED_ARGS_LEGACY_MODE, "false")
+        Options.setFromRegistry()
+        self.assertFalse(ReflectedArgs.isLegacyMode())
+        self.assertEqual(t.varArgs(1, 2, 3), "long")
+
+    def test_reflected_args_legacy_mode_defaults_to_true(self):
+        Options.setFromRegistry()
+        self.assertTrue(ReflectedArgs.isLegacyMode())
+
 class ComplexOverloadingTests(unittest.TestCase):
 
     def setUp(self):
@@ -359,6 +400,7 @@ def test_main():
         OverloadedDispatchTests,
         VarargsDispatchTests,
         LegacyVarargsDispatchTests,
+        ReflectedArgsOptionsTests,
         ComplexOverloadingTests,
     )
 
